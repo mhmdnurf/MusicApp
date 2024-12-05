@@ -15,33 +15,41 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const {position, duration} = useProgress();
 
-  const setupPlayer = async () => {
+  const setupPlayer = React.useCallback(async () => {
     try {
       await TrackPlayer.setupPlayer();
-
       await TrackPlayer.add(tracks);
+      await getCurrentTrack();
     } catch (error) {
       console.error('Error setting up TrackPlayer:', error);
     }
-  };
+  }, []);
 
   const getCurrentTrack = async () => {
-    const id = await TrackPlayer.getActiveTrackIndex();
-    const track = await TrackPlayer.getTrack(id ?? 0);
+    try {
+      const id = await TrackPlayer.getActiveTrackIndex();
+      const track = await TrackPlayer.getTrack(id ?? 0);
 
-    setTrackTitle(track?.title ?? '');
-    setTrackArtist(track?.artist ?? '');
-    setTrackArtwork(track?.artwork ?? '');
+      setTrackTitle(track?.title ?? '');
+      setTrackArtist(track?.artist ?? '');
+      setTrackArtwork(track?.artwork ?? '');
+    } catch (error) {
+      console.error('Error getting current track:', error);
+    }
   };
 
   const togglePlayback = async () => {
-    const state = (await getPlaybackState()).state;
-    if (state === State.Playing) {
-      await TrackPlayer.pause();
-      setIsPlaying(false);
-    } else {
-      await TrackPlayer.play();
-      setIsPlaying(true);
+    try {
+      const state = (await getPlaybackState()).state;
+      if (state === State.Playing) {
+        await TrackPlayer.pause();
+        setIsPlaying(false);
+      } else {
+        await TrackPlayer.play();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Error toggling playback:', error);
     }
   };
 
@@ -63,11 +71,7 @@ export default function App() {
         }
         await TrackPlayer.play();
 
-        const id = await TrackPlayer.getActiveTrackIndex();
-        const track = await TrackPlayer.getTrack(id ?? 0);
-        setTrackTitle(track?.title ?? '');
-        setTrackArtist(track?.artist ?? '');
-        setTrackArtwork(track?.artwork ?? '');
+        await getCurrentTrack(); // Update the current track info
       }
     } catch (error) {
       console.error('Error skipping to previous track:', error);
@@ -86,11 +90,7 @@ export default function App() {
       }
       await TrackPlayer.play();
 
-      const id = await TrackPlayer.getActiveTrackIndex();
-      const track = await TrackPlayer.getTrack(id ?? 0);
-      setTrackTitle(track?.title ?? '');
-      setTrackArtist(track?.artist ?? '');
-      setTrackArtwork(track?.artwork ?? '');
+      await getCurrentTrack(); // Update the current track info
     } catch (error) {
       console.error('Error skipping to next track:', error);
     }
@@ -104,12 +104,11 @@ export default function App() {
 
   useEffect(() => {
     setupPlayer();
-    getCurrentTrack();
 
     return () => {
       TrackPlayer.reset();
     };
-  }, []);
+  }, [setupPlayer]);
 
   return (
     <>
